@@ -25,7 +25,11 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Parser
+      Parser.Error
+      Parser.Input
+      Parser.Parsec
+      Parser.Result
   other-modules:
       Paths_Parser
   autogen-modules:
