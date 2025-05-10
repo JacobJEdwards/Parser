@@ -7,6 +7,9 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 -- |
 -- Module: Parser.Error
@@ -14,6 +17,9 @@
 module Parser.Error (type Error (..)) where
 
 import Data.Kind (type Type)
+import GHC.Generics (type Generic, type Generic1)
+import Control.DeepSeq (type NFData)
+import Data.Data (type Typeable)
 
 -- | The error type for the parser.
 type Error :: Type -> Type -> Type
@@ -26,8 +32,9 @@ data Error :: Type -> Type -> Type where
   CustomError :: e -> Error i e
   -- | The input is empty.
   Empty :: Error i e
+  deriving stock (Functor, Eq, Ord, Read, Generic, Generic1, Typeable)
 
-deriving stock instance (Eq i, Eq e) => Eq (Error i e)
+deriving anyclass instance (NFData i, NFData e) => NFData (Error i e)
 
 -- | Shows the error.
 instance (Show i, Show e) => Show (Error i e) where

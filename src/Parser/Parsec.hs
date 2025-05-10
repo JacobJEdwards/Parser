@@ -10,6 +10,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 -- |
 -- Module      : Parser.Parsec
@@ -63,6 +64,7 @@ import Parser.Result (type Result (type Errors, type Result))
 type Parser :: Type -> Type -> Type -> Type
 newtype Parser i e o = Parser {runParser :: i -> Result i e (i, o)}
 
+
 -- | The 'Functor' instance for the parser type.
 instance Functor (Parser i e) where
   -- \| Maps a function over the result of the parser.
@@ -86,11 +88,11 @@ instance Applicative (Parser i e) where
 
 -- | The 'Alternative' instance for the parser type.
 instance Alternative (Parser i e) where
-  -- \| The empty parser.
+  -- | The empty parser.
   empty :: Parser i e a
   empty = Parser $ const empty
 
-  -- \| Choice of two parsers.
+  -- | Choice of two parsers.
   (<|>) :: Parser i e a -> Parser i e a -> Parser i e a
   (<|>) p1 p2 = Parser $ \input -> case runParser p1 input of
     Errors _ -> runParser p2 input
@@ -98,11 +100,11 @@ instance Alternative (Parser i e) where
 
 -- | The 'Monad' instance for the parser type.
 instance Monad (Parser i e) where
-  -- \| Returns a value in the parser.
+  -- | Returns a value in the parser.
   return :: a -> Parser i e a
   return = pure
 
-  -- \| Binds a parser to a function.
+  -- | Binds a parser to a function.
   (>>=) :: Parser i e a -> (a -> Parser i e b) -> Parser i e b
   (>>=) parser f = Parser $ \input -> case runParser parser input of
     Errors errs -> Errors errs
@@ -110,13 +112,13 @@ instance Monad (Parser i e) where
 
 -- | The 'Semigroup' instance for the parser type.
 instance (Semigroup a) => Semigroup (Parser i e a) where
-  -- \| Combines two parsers.
+  -- | Combines two parsers.
   (<>) :: Parser i e a -> Parser i e a -> Parser i e a
   (<>) = liftA2 (<>)
 
 -- | The 'Monoid' instance for the parser type.
 instance (Semigroup a) => Monoid (Parser i e a) where
-  -- \| The empty parser.
+  -- | The empty parser.
   mempty :: Parser i e a
   mempty = empty
 
@@ -127,8 +129,8 @@ instance (Semigroup a) => Monoid (Parser i e a) where
 satisfy :: (Input i, Token i ~ a) => (a -> Bool) -> Parser i e a
 satisfy predicate = Parser $ \input -> case uncons input of
   Just (x, xs) | predicate x -> Result (xs, x)
-  Just _ -> Errors [Unexpected input]
-  Nothing -> Errors [EndOfInput]
+  Just _ -> Errors $ pure $ Unexpected input
+  Nothing -> Errors $ pure EndOfInput
 {-# INLINEABLE satisfy #-}
 
 -- | Parses a character.
@@ -298,7 +300,7 @@ chainl1 p op = Parser $ \input ->
 manyTill :: Parser i e a -> Parser i e b -> Parser i e [a]
 manyTill p end = go
   where
-    go = ([] <$ end) <|> ((:) <$> p <*> go)
+    go = (mempty <$ end) <|> ((:) <$> p <*> go)
 
 -- | Tries to parse a value.
 -- If the parser fails, it returns an empty result.
@@ -306,7 +308,7 @@ manyTill p end = go
 -- Errors []
 try :: Parser i e a -> Parser i e a
 try p = Parser $ \input -> case runParser p input of
-  Errors _ -> Errors []
+  Errors _ -> Errors mempty
   res -> res
 
 -- | Parses a list of values until the end parser succeeds.
